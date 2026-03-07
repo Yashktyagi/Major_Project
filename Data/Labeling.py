@@ -13,7 +13,7 @@ pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
 pd.set_option("display.max_columns", None)
 
-client = genai.Client(api_key="AIzaSyBUJFE6OuN3yN6IHZ9mjMc9AI7o7m8RHqI")
+client = genai.Client(api_key="")
 
 df = pd.read_csv("dataset.csv")
 
