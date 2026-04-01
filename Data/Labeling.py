@@ -109,130 +109,95 @@ Headlines:
 <INSERT_HEADLINES_LIST>
 """
 
-def build_batch_prompt(base_prompt, headlines):
-    """
-    Insert multiple headlines into prompt
-    """
-    headline_block = ""
+import json
+import pandas as pd
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    for i, h in enumerate(headlines):
-        headline_block += f"{i+1}. {h}\n"
+# ----------------------------
+# Prompt Builder
+# ----------------------------
+def build_prompt(base_prompt, headline):
+    return base_prompt.replace("<INSERT HEADLINE HERE>", headline)
 
-    return base_prompt.replace("<INSERT_HEADLINES_LIST>", headline_block)
-
-def parse_batch_response(response_text):
-    """
-    Extract JSON list safely
-    """
+# ----------------------------
+# JSON Parser
+# ----------------------------
+def parse_response(response_text):
     try:
         return json.loads(response_text)
     except:
-        start = response_text.find("[")
-        end = response_text.rfind("]") + 1
+        start = response_text.find("{")
+        end = response_text.rfind("}") + 1
         json_str = response_text[start:end]
         return json.loads(json_str)
 
-# def annotate_dataframe_batch(df, text_column, base_prompt, batch_size=10, model_name="gemini-3-flash-preview"):
-#
-#     results = []
-#
-#     for start in range(0, len(df), batch_size):
-#         end = start + batch_size
-#         batch_df = df.iloc[start:end]
-#         headlines = batch_df[text_column].tolist()
-#
-#         try:
-#             full_prompt = build_batch_prompt(base_prompt, headlines)
-#
-#             response = client.models.generate_content(
-#                 model=model_name,
-#                 contents=full_prompt,
-#                 config={
-#                     "temperature": 0.0
-#                     }
-#             )
-#
-#             response_text = response.text.strip()
-#             parsed_outputs = parse_batch_response(response_text)
-#
-#             for output in parsed_outputs:
-#                 results.append({
-#                     "label": output.get("label"),
-#                     "confidence": output.get("confidence")
-#                 })
-#
-#         except Exception as e:
-#             print(f"Batch error at rows {start}-{end}: {e}")
-#
-#             # Fill batch with None if failure
-#             for _ in headlines:
-#                 results.append({
-#                     "label": None,
-#                     "confidence": None
-#                 })
-#
-#     result_df = pd.DataFrame(results)
-#     return pd.concat([df.reset_index(drop=True), result_df], axis=1)
+# ----------------------------
+# API Call
+# ----------------------------
+def annotate_headline(headline, base_prompt, model_name="gemini-3-flash-preview"):
 
-def process_batch(batch_df, text_column, base_prompt, model_name):
-    headlines = batch_df[text_column].tolist()
-    full_prompt = build_batch_prompt(base_prompt, headlines)
+    full_prompt = build_prompt(base_prompt, headline)
 
     response = client.models.generate_content(
         model=model_name,
-        contents=full_prompt,
-        config={"temperature": 0.0}
+        contents=full_prompt
     )
 
     response_text = response.text.strip()
-    parsed_outputs = parse_batch_response(response_text)
 
-    return parsed_outputs
+    parsed = parse_response(response_text)
 
-def annotate_dataframe_parallel(df, text_column, base_prompt,
-                                batch_size=20,
-                                max_workers=20,
-                                model_name="gemini-3-flash-preview"):
+    return {
+        "label": parsed.get("label"),
+        "confidence": parsed.get("confidence")
+    }
 
-    batches = []
-    for start in range(0, len(df), batch_size):
-        batches.append(df.iloc[start:start+batch_size])
+# ----------------------------
+# Worker Function
+# ----------------------------
+def worker(idx, row, text_column, base_prompt):
+    try:
+        headline = row[text_column]
+        result = annotate_headline(headline, base_prompt)
+        return idx, result
 
-    results = []
+    except Exception as e:
+        print(f"Error at index {idx}: {e}")
+        return idx, {"label": None, "confidence": None}
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+# ----------------------------
+# Parallel Annotation Function
+# ----------------------------
+def annotate_dataframe_parallel(df, text_column, base_prompt, max_workers=50):
+
+    results = [None] * len(df)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+
         futures = [
-            executor.submit(process_batch, batch, text_column, base_prompt, model_name)
-            for batch in batches
+            executor.submit(worker, idx, row, text_column, base_prompt)
+            for idx, row in df.iterrows()
         ]
 
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                batch_results = future.result()
-                for output in batch_results:
-                    results.append({
-                        "label": output.get("label"),
-                        "confidence": output.get("confidence")
-                    })
-            except Exception as e:
-                print("Batch failed:", e)
+        for future in as_completed(futures):
+            idx, result = future.result()
+            results[idx] = result
 
     result_df = pd.DataFrame(results)
+
     return pd.concat([df.reset_index(drop=True), result_df], axis=1)
 
-# annotated_df = annotate_dataframe_batch(
-#     df,
-#     "headline",
-#     prompt,
-#     batch_size=20
-# )
-
+# ----------------------------
+# Run Annotation
+# ----------------------------
 annotated_df = annotate_dataframe_parallel(
-    df,
-    "headline",
-    prompt,
-    batch_size=20,
-    max_workers=25  # adjust safely
+    df.head(10000),
+    text_column="headline",   # change if column name differs
+    base_prompt=prompt,
+    max_workers=50
 )
 
-annotated_df.to_csv("dataset_labeled.csv", index=False)
+print("Annotation Complete")
+print(annotated_df.head())
+
+annotated_df.to_csv("/content/drive/MyDrive/dataset_labeled2.csv", index=False)
