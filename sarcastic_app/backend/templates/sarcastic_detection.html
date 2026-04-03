@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sarcasm Detection System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+    transition: 0.3s;
+}
+
+body.light {
+    background: #f5f7fa;
+    color: #222;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: auto;
+    padding-top: 30px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 25px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    margin-top: 20px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.3);
+}
+
+body.light .card {
+    background: white;
+}
+
+textarea {
+    width: 100%;
+    height: 120px;
+    border-radius: 10px;
+    border: none;
+    padding: 15px;
+    font-size: 16px;
+    resize: none;
+}
+
+.btn {
+    margin-top: 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    background: linear-gradient(45deg, #00c6ff, #0072ff);
+    color: white;
+    transition: 0.3s;
+}
+
+.btn:hover {
+    transform: scale(1.05);
+}
+
+.btn-secondary {
+    background: linear-gradient(45deg, #ff4d4d, #b30000);
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: linear-gradient(145deg, #1e2a38, #2c3e50);
+    padding: 25px;
+    border-radius: 20px;
+    text-align: center;
+    width: 320px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+}
+
+.model-option {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255,255,255,0.08);
+    padding: 12px;
+    border-radius: 12px;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: 0.3s;
+    border: 2px solid transparent;
+}
+
+.model-option:hover {
+    background: rgba(255,255,255,0.15);
+    transform: scale(1.03);
+}
+
+.model-option.selected {
+    border: 2px solid #00c6ff;
+    background: rgba(0,198,255,0.2);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 10px;
+    text-align: center;
+}
+
+th {
+    background: #0072ff;
+}
+
+.not-sarcastic {
+    color: #ff3b3b;
+    font-weight: bold;
+}
+
+.sarcastic {
+    color: #00c853;
+    font-weight: bold;
+}
+
+.loader-overlay {
+    display: none;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    top: 0;
+    left: 0;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 99999;
+    text-align: center;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 6px solid #fff;
+    border-top: 6px solid #00c6ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
+.overlay-message {
+    margin-top: 20px;
+    font-size: 18px;
+}
+
+.overlay-success {
+    color: #00ffae;
+}
+
+.overlay-error {
+    color: #ff4d4d;
+}
+
+canvas {
+    margin-top: 20px;
+    background: white;
+    border-radius: 10px;
+}
+</style>
+    <style>
+/* Result Popup Animation */
+.result-popup {
+    font-size: 32px;
+    font-weight: bold;
+    margin-top: 20px;
+    animation: zoomInOut 1.2s ease-in-out;
+}
+
+@keyframes zoomInOut {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.result-sarcastic {
+    color: green;
+}
+
+.result-normal {
+    color: red;
+}
+
+body.light .result-sarcastic {
+    color: #d50000;
+}
+
+body.light .result-normal {
+    color: #1b5e20;
+}
+</style>
+    <style>
+
+
+/* Light Mode Overrides */
+body.light .sarcastic {
+    color: #d50000;
+}
+
+body.light .not-sarcastic {
+    color: #1b5e20;
+}
+
+/* ===== Modal Light Theme Fix ===== */
+body.light .modal-content {
+    background: #ffffff;
+    color: #222;
+    box-shadow: 0 0 25px rgba(0,0,0,0.2);
+}
+
+body.light .model-option {
+    background: #f1f3f6;
+    color: #222;
+}
+
+body.light .model-option:hover {
+    background: #e0e4ea;
+}
+
+body.light .model-option.selected {
+    background: rgba(0,114,255,0.15);
+    border: 2px solid #0072ff;
+}
+
+/* Buttons in Light Mode */
+body.light .btn {
+    background: linear-gradient(45deg, #0072ff, #0051cc);
+}
+
+/* Table header in Light Mode */
+body.light th {
+    background: #0072ff;
+    color: white;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="top-bar">
+<h1>🧠 Sarcasm Detection</h1>
+<button class="btn" onclick="toggleTheme()">Toggle Theme</button>
+</div>
+
+<div class="card">
+<h3>Enter Headlines</h3>
+<textarea id="headlineInput"></textarea>
+<br>
+<button class="btn" onclick="startVoice()">🎤 Voice Input</button>
+<button class="btn" onclick="openModal()">Select Model</button>
+</div>
+
+<div class="card">
+<h3>Results</h3>
+<table>
+<thead>
+<tr>
+<th>Headline</th>
+<th>Model</th>
+<th>Prediction</th>
+<th>Confidence</th>
+</tr>
+</thead>
+<tbody id="resultBody"></tbody>
+</table>
+
+<canvas id="chart"></canvas>
+</div>
+
+</div>
+
+<div class="modal" id="modal">
+<div class="modal-content">
+<h2>Select Model</h2>
+
+<div class="model-option" onclick="selectModel(this, 'ML')">ML Techniques</div>
+<div class="model-option" onclick="selectModel(this, 'CNN_LSTM')">CNN + LSTM</div>
+<div class="model-option" onclick="selectModel(this, 'Transformer')">Transformer</div>
+<div class="model-option" onclick="selectModel(this, 'ALL')">ALL Models</div>
+
+<div class="modal-actions">
+<button class="btn" onclick="predict()">Predict</button>
+<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+</div>
+
+</div>
+</div>
+
+<div class="loader-overlay" id="loader">
+<div class="spinner" id="spinner"></div>
+<div class="overlay-message" id="overlayMsg">Analyzing...</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let selectedModel = null;
+
+function toggleTheme(){
+    document.body.classList.toggle("light");
+}
+
+function openModal(){
+    document.getElementById("modal").style.display = "flex";
+}
+
+function closeModal(){
+    document.getElementById("modal").style.display = "none";
+}
+
+function selectModel(el, model){
+    document.querySelectorAll(".model-option").forEach(e => e.classList.remove("selected"));
+    el.classList.add("selected");
+    selectedModel = model;
+}
+
+function startVoice(){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRecognition){
+        showOverlay("Voice input not supported", "error");
+        return;
+    }
+    let recognition = new SpeechRecognition();
+    recognition.start();
+    recognition.onresult = function(e){
+        document.getElementById("headlineInput").value += e.results[0][0].transcript + "\n";
+    }
+}
+
+function showOverlay(message, type){
+    let loader = document.getElementById("loader");
+    let msg = document.getElementById("overlayMsg");
+    let spinner = document.getElementById("spinner");
+
+    loader.style.display = "flex";
+
+    if(type === "loading"){
+        spinner.style.display = "block";
+        msg.innerHTML = "Analyzing...";
+        msg.className = "overlay-message";
+        return;
+    }
+
+    spinner.style.display = "none";
+
+    if(type === "result"){
+        let isSarcastic = message === "Sarcastic";
+
+        msg.innerHTML = `
+            <div class="result-popup ${isSarcastic ? 'result-sarcastic' : 'result-normal'}">
+                ${isSarcastic ? "😂 Sarcastic" : "🙂 Not Sarcastic"}
+            </div>
+        `;
+    } else {
+        msg.innerText = message;
+        msg.className = "overlay-message " + (type === "error" ? "overlay-error" : "overlay-success");
+    }
+
+    setTimeout(()=>{
+        loader.style.display = "none";
+    }, 2000);
+}
+
+function drawChart(stats){
+    let ctx = document.getElementById("chart").getContext("2d");
+
+    if(window.myChart) window.myChart.destroy();
+
+    window.myChart = new Chart(ctx,{
+        type:"bar",
+        data:{
+            labels:Object.keys(stats),
+            datasets:[{
+                label:"Sarcastic Count",
+                data:Object.values(stats)
+            }]
+        }
+    });
+}
+</script>
+<!-- Replace ONLY your predict() function with this -->
+
+<script>
+async function predict(){
+    if(!selectedModel){
+        showOverlay("Please select a model", "error");
+        return;
+    }
+
+    let headlines = document.getElementById("headlineInput").value
+        .split("\n")
+        .filter(h => h.trim() !== "");
+
+    if(headlines.length === 0){
+        showOverlay("Please enter at least one headline", "error");
+        return;
+    }
+
+    showOverlay("Analyzing headlines...", "loading");
+    closeModal();
+
+    try{
+        let response = await fetch("/predict/", {   // 🔥 ABSOLUTE PATH FIX
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                headlines: headlines,
+                model: selectedModel
+            })
+        });
+
+        // 🔥 DEBUG RESPONSE
+        console.log("Status:", response.status);
+
+        let text = await response.text();
+        console.log("Raw Response:", text);
+
+        let data;
+        try{
+            data = JSON.parse(text);
+        }catch(e){
+            throw new Error("Invalid JSON from backend");
+        }
+
+        if(!response.ok){
+            throw new Error(data.error || "Server error");
+        }
+
+        let tbody = document.getElementById("resultBody");
+        tbody.innerHTML = "";
+
+        let stats = {"ML":0,"CNN+LSTM":0,"Transformer":0};
+
+        data.results.forEach(item => {
+            let row = document.createElement("tr");
+
+            let emoji = item.prediction === "Sarcastic" ? "😂" : "🙂";
+
+            row.innerHTML = `
+                <td>${item.headline}</td>
+                <td>${item.model}</td>
+                <td class="${item.prediction === 'Sarcastic' ? 'sarcastic' : 'not-sarcastic'}">
+                    ${emoji} ${item.prediction}
+                </td>
+                <td>${item.confidence}%</td>
+            `;
+
+            if(item.prediction === "Sarcastic" && stats[item.model] !== undefined){
+                stats[item.model]++;
+            }
+
+            tbody.appendChild(row);
+        });
+
+        drawChart(stats);
+        let preds = data.results.map(r => r.prediction);
+
+        let sarcasticCount = preds.filter(p => p === "Sarcastic").length;
+        let normalCount = preds.length - sarcasticCount;
+
+        let finalResult;
+
+        if (sarcasticCount > normalCount) {
+            finalResult = "Sarcastic";
+        }
+        else if (normalCount > sarcasticCount) {
+            finalResult = "Not Sarcastic";
+        }
+        else {
+            // 🔥 Tie case → use confidence
+            let sarcasticConfidence = data.results
+                .filter(r => r.prediction === "Sarcastic")
+                .reduce((sum, r) => sum + r.confidence, 0);
+
+            let normalConfidence = data.results
+                .filter(r => r.prediction === "Not Sarcastic")
+                .reduce((sum, r) => sum + r.confidence, 0);
+
+            finalResult = sarcasticConfidence > normalConfidence ? "Sarcastic" : "Not Sarcastic";
+        }
+
+        showOverlay(finalResult, "result");
+
+    } catch(err){
+        console.error("FETCH ERROR:", err);
+        showOverlay("Backend connection failed", "error");
+    }
+}
+</script>
+
+</body>
+</html>

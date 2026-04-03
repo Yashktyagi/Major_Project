@@ -1,0 +1,52 @@
+# 🔥 Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 🔥 Virtual Environment
+venv/
+env/
+ENV/
+
+# 🔥 Django
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# 🔥 Jupyter Notebook
+.ipynb_checkpoints/
+
+# 🔥 VS Code / IDE
+.vscode/
+.idea/
+
+# 🔥 OS Files
+.DS_Store
+Thumbs.db
+
+# 🔥 Logs
+*.log
+
+# 🔥 ML / Data Files (IMPORTANT for you)
+*.csv
+*.xlsx
+*.h5
+*.keras
+*.pkl
+*.joblib
+
+# 🔥 Ignore ML model folders
+sarcastic_app/IndicSarcasmModel/
+sarcastic_app/models_store/
+
+# 🔥 Temp / Cache
+tmp/
+temp/
+
+# 🔥 Node (if any frontend later)
+node_modules/
+
+# 🔥 Secrets
+.env
